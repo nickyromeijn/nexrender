@@ -1,6 +1,8 @@
 const fs  = require('fs')
 const url = require('url')
 const FTP = require('ftp')
+var path = require("path");
+
 
 const download = (job, settings, src, dest, params) => {
     let parsed = global.URL ? new URL(asset.src) : url.parse(src)
@@ -12,7 +14,7 @@ const download = (job, settings, src, dest, params) => {
 
     return new Promise((resolve, reject) => {
         const connection = new FTP();
-        const filepath   = uri.pathname;
+        const filepath   = parsed.pathname;
 
         connection.connect(params);
         connection.get(filepath, function(err, stream) {
@@ -41,18 +43,40 @@ const upload = (job, settings, src, params) => {
     }
 
     return new Promise((resolve, reject) => {
-        const file = fs.createReadStream(src);
-        const con = new FTP();
 
+        // Read file
+        try{
+            const file = fs.createReadStream(src);
+        }
+        catch(e){
+            throw new Error('Cloud not read file, Please check path and permissions.')
+        }
         file.on('error', (err) => reject(err))
-
-        con.connect(params);
-        con.put(file, src, function(err) {
-            if (err) return reject(err)
-
+        var filename = path.basename(src)
+        
+        // Connect to FTP Server
+        try{
+            const con = new FTP();
+            con.connect(params);
+        }
+        catch(e){
+            throw new Error('Cloud not connect to FTP Server, Please check Host and Port.')
+        }
+        
+        // Put file 
+        try{
+            con.put(file, filename, function(err) {
+                if (err) return reject(err)
+    
+                con.end()
+                resolve()
+            });
+        }
+        catch(e){
+            throw new Error('Cloud not upload file, Please make sure FTP user has write permissions.')
             con.end()
-            resolve()
-        });
+        }
+    
     })
 }
 
