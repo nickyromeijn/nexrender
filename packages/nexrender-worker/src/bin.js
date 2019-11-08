@@ -2,9 +2,8 @@
 
 const arg       = require('arg')
 const chalk     = require('chalk')
-const {start}   = require('./index')
 const {version} = require('../package.json')
-
+const start     = require('./index')
 const args = arg({
     // Types
     '--help':       Boolean,
@@ -23,6 +22,7 @@ const args = arg({
     '--debug':          Boolean,
     '--multi-frames':   Boolean,
     '--reuse':          Boolean,
+    '--queue':          String,
 
     '--max-memory-percent':  Number,
     '--image-cache-percent': Number,
@@ -77,6 +77,8 @@ if (args['--help']) {
 
   {bold ADVANCED OPTIONS}
 
+    --queue                                 configure which message queue to use. Currently rsmq (redis msg queue) and
+                                            nexrender (nexrender server) are the two available options. Default: nexrender
 
     --stop-on-error                         forces worker to stop if processing/rendering error occures,
                                             otherwise worker will report an error, and continue working
@@ -105,11 +107,11 @@ if (args['--help']) {
     --image-cache-percent                   (from Adobe site): specifies the maximum percentage of memory used
                                             to cache already rendered images and footage.
 
-    --reuse                                 (from Adobe site): Reuse the currently running instance of After Effects (if found) to 
-                                            perform the render. When an already running instance is used, aerender saves preferences 
-                                            to disk when rendering has completed, but does not quit After Effects. If this argument 
-                                            is not used, aerender starts a new instance of After Effects, even if one is already 
-                                            running. It quits that instance when rendering has completed, and does not save 
+    --reuse                                 (from Adobe site): Reuse the currently running instance of After Effects (if found) to
+                                            perform the render. When an already running instance is used, aerender saves preferences
+                                            to disk when rendering has completed, but does not quit After Effects. If this argument
+                                            is not used, aerender starts a new instance of After Effects, even if one is already
+                                            running. It quits that instance when rendering has completed, and does not save
                                             preferences.
 
 
@@ -144,6 +146,7 @@ const opt = (key, arg) => {if (args[arg]) {
     settings[key] = args[arg];
 }}
 
+opt('queue',                '--queue');
 opt('binary',               '--binary');
 opt('workpath',             '--workpath');
 opt('no-license',           '--no-license');
@@ -165,4 +168,4 @@ if (settings['no-license']) {
     delete settings['no-license'];
 }
 
-start(serverHost, serverSecret, settings);
+start({backend: settings['queue']})(serverHost, serverSecret, settings);

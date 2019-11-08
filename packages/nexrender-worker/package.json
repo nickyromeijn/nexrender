@@ -19,7 +19,8 @@
     "@nexrender/api": "^1.5.7",
     "@nexrender/core": "^1.8.11",
     "arg": "^4.1.0",
-    "chalk": "^2.4.2"
+    "chalk": "^2.4.2",
+    "rsmq-worker": "^0.5.2"
   },
   "publishConfig": {
     "access": "public"

@@ -1,35 +1,5 @@
-const { createClient } = require('@nexrender/api')
-const { init, render } = require('@nexrender/core')
-
-const NEXRENDER_API_POLLING = process.env.NEXRENDER_API_POLLING || 30 * 1000;
-
-/* TODO: possibly add support for graceful shutdown */
-let active = true;
-
-const delay = amount => (
-    new Promise(resolve => setTimeout(resolve, amount))
-)
-
-const nextJob = async (client, settings) => {
-    do {
-        try {
-            const listing = await client.listJobs();
-            const queued  = listing.filter(job => job.state == 'queued')
-
-            if (queued.length > 0) {
-                return queued[Math.floor(Math.random() * queued.length)];
-            }
-        } catch (err) {
-            if (settings.stopOnError) {
-                throw err;
-            } else {
-                console.error(err)
-            }
-        }
-
-        await delay(settings.polling || NEXRENDER_API_POLLING)
-    } while (active)
-}
+const rsmq      = require('./adapters/rsmq')
+const nexrender = require('./adapters/nexrender')
 
 /**
  * Starts worker "thread" of continious loop
@@ -39,44 +9,12 @@ const nextJob = async (client, settings) => {
  * @param  {Object} settings
  * @return {Promise}
  */
-const start = async (host, secret, settings) => {
-    settings = init(Object.assign({}, settings, {
-        logger: console,
-    }))
 
-    const client = createClient({ host, secret });
-
-    do {
-        let job = await nextJob(client, settings); {
-            job.state = 'started';
-        }
-
-        try {
-            await client.updateJob(job.uid, job)
-        } catch(err) {
-            console.log(`[${job.uid}] error while updating job state to ${job.state}. Job abandoned.`)
-            continue;
-        }
-
-        try {
-            job = await render(job, settings); {
-                job.state = 'finished';
-            }
-
-            await client.updateJob(job.uid, job)
-        } catch (err) {
-            job.state = 'error';
-            job.error = err;
-
-            await client.updateJob(job.uid, job);
-
-            if (settings.stopOnError) {
-                throw err;
-            } else {
-                console.log(`[${job.uid}] error occurred: ${err.stack}`)
-            }
-        }
-    } while (active)
+module.exports = ({backend = 'nexrender'})=>{
+  switch(backend){
+    case 'nexrender':
+      return nexrender.start
+    case 'rsmq':
+      return rsmq.start
+  }
 }
-
-module.exports = { start }
